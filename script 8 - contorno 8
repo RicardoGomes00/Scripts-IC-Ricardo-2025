@@ -1,1 +1,58 @@
 
+import cv2
+
+# Caminho da imagem
+caminho_imagem = r"C:\Users\Ricardo Gomes\Desktop\imagens\P01\P01_C001H001S0001014131.bmp"
+
+# Carregar a imagem
+imagem = cv2.imread(caminho_imagem)
+
+# Verificar se a imagem foi carregada corretamente
+if imagem is None:
+    print("Não foi possível carregar a imagem. Verifique o caminho.")
+else:
+    # Obter dimensões da imagem
+    altura, largura = imagem.shape[:2]
+
+    # Converter para escala de cinza
+    imagem_cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
+
+    # Ajustar o contraste e o brilho
+    alpha = 1.2  # Contraste
+    beta = 4     # Brilho
+    imagem_clareada = cv2.convertScaleAbs(imagem_cinza, alpha=alpha, beta=beta)
+
+    # Converter para preto e branco (binário)
+    _, imagem_pb = cv2.threshold(imagem_clareada, 128, 255, cv2.THRESH_BINARY)
+
+    # Detectar contornos na imagem preto e branco
+    contornos, _ = cv2.findContours(imagem_pb, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Copiar a imagem original para desenhar os contornos
+    imagem_contornos = imagem.copy()
+
+    for contorno in contornos:
+        # Aproximar o contorno
+        epsilon = 0.02 * cv2.arcLength(contorno, True)
+        vertices = cv2.approxPolyDP(contorno, epsilon, True)
+
+        # Verificar se o contorno é um círculo (muitos vértices)
+        if len(vertices) > 5:
+            # Calcular o círculo mínimo que envolve o contorno
+            (x, y), raio = cv2.minEnclosingCircle(contorno)
+            diametro = 2 * raio
+
+            # Verificar se o diâmetro é maior ou igual a 50 pixels
+            if diametro >= 50:
+                # Desenhar o contorno em verde
+                cv2.drawContours(imagem_contornos, [contorno], -1, (0, 255, 0), 2)
+
+    # Redimensionar a imagem para ter 1000 pixels de largura
+    nova_largura = 1000
+    nova_altura = int(altura * (nova_largura / largura))
+    imagem_redimensionada = cv2.resize(imagem_contornos, (nova_largura, nova_altura))
+
+    # Exibir a imagem com contornos
+    cv2.imshow("Imagem com Contornos Verdes", imagem_redimensionada)
+    cv2.waitKey(0)  # Esperar até que uma tecla seja pressionada
+    cv2.destroyAllWindows()
