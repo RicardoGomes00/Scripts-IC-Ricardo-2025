@@ -1,1 +1,59 @@
 
+import cv2
+
+# calda
+#caminho = r"C:\Users\Ricardo Gomes\Desktop\P02_1_C001H001S0001012679.bmp"
+# inicio
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P02_1_C001H001S0001000198.bmp"
+# bolha com inicio
+caminho = r"C:\Users\Ricardo Gomes\Desktop\P01_C001H001S0001000071.bmp"
+# inicio com ruido
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P02_1_C001H001S0001000160.bmp"
+
+# Carregar a imagem
+imagem = cv2.imread(caminho)
+
+if imagem is None:
+    print("Não foi possível carregar a imagem. Verifique o caminho.")
+else:
+    # Obter dimensões da imagem
+    altura, largura = imagem.shape[:2]
+    largura_parte = largura // 5  
+
+    for i in range(5):
+        # Definir os limites para a parte atual
+        x_inicio = i * largura_parte
+        x_fim = (i + 1) * largura_parte if i < 4 else largura  
+
+        # Recortar a parte da imagem
+        parte_imagem = imagem[:, x_inicio:x_fim]
+
+        # Converter para escala de cinza e aplicar contraste e brilho
+        imagem_cinza = cv2.cvtColor(parte_imagem, cv2.COLOR_BGR2GRAY)
+        alpha = 1.0  # Contraste
+        beta = 0   # Brilho
+        imagem_clareada = cv2.convertScaleAbs(imagem_cinza, alpha=alpha, beta=beta)
+
+        _, imagem_pb = cv2.threshold(imagem_clareada, 128, 255, cv2.THRESH_BINARY)
+
+        contornos, _ = cv2.findContours(imagem_pb, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Contar círculos na parte atual
+        contagem_circulos = 0
+        imagem_contornos = cv2.cvtColor(imagem_pb, cv2.COLOR_GRAY2BGR)
+
+        for contorno in contornos:
+            epsilon = 0.02 * cv2.arcLength(contorno, True)
+            vertices = cv2.approxPolyDP(contorno, epsilon, True)
+
+            if len(vertices) > 5:
+                contagem_circulos += 1
+                # Desenhar o contorno em verde
+                cv2.drawContours(imagem_contornos, [contorno], -1, (0, 255, 0), 2)
+
+        # Exibir cada parte e o número de círculos detectados
+        cv2.imshow(f"Parte {i + 1}", imagem_contornos)
+        print(f"Número de círculos detectados na parte {i + 1}: {contagem_circulos}")
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
