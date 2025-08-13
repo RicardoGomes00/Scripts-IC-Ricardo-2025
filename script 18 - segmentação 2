@@ -10,7 +10,7 @@ def selecionar_imagens():
     return list(caminhos)
 
 # Função para detectar e desenhar contornos
-def aplicar_contornos(img, tamanho_minimo=20):
+def aplicar_contornos(img, tamanho_minimo=500):
     bordas = cv2.Canny(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 50, 150)  
     img_contorno = img.copy()
     
@@ -18,31 +18,45 @@ def aplicar_contornos(img, tamanho_minimo=20):
     
     contornos_filtrados = [contorno for contorno in contornos if cv2.contourArea(contorno) > tamanho_minimo]
 
-    cv2.drawContours(img_contorno, contornos_filtrados, -1, (0, 0, 0), 1)  
+    cv2.drawContours(img_contorno, contornos_filtrados, -1, (0, 255, 0), 2)  # Verde para contornos
     return img_contorno
 
+# Função para segmentação de cor vermelha
+def segmentar_vermelho(imagem):
+    hsv = cv2.cvtColor(imagem, cv2.COLOR_BGR2HSV)
+    
+    # Intervalos de cor para vermelho (considerando que pode estar nos extremos do HSV)
+    lower_red1 = np.array([0, 120, 70])
+    upper_red1 = np.array([10, 255, 255])
+    lower_red2 = np.array([170, 120, 70])
+    upper_red2 = np.array([180, 255, 255])
+    
+    # Criar máscaras
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask = mask1 + mask2
+    
+    # Aplicar a máscara à imagem original
+    resultado = cv2.bitwise_and(imagem, imagem, mask=mask)
+    return resultado
+
+# Função para aplicar filtros e contornos
 def aplicar_filtro_mediana(caminho):
-    imagem_cinza = cv2.imread(caminho, cv2.IMREAD_GRAYSCALE)
-    if imagem_cinza is None:
+    imagem = cv2.imread(caminho)
+    if imagem is None:
         print(f"Erro ao carregar a imagem: {caminho}")
         return None
     
-    imagem = cv2.applyColorMap(imagem_cinza, cv2.COLORMAP_RAINBOW)
-
-    # filtro morfologico
-    # kernel = np.ones((5, 5), np.uint8)
-    # imagem_morfologica = cv2.morphologyEx(imagem, cv2.MORPH_CLOSE, kernel)
-
-    # fiiltlro mediana
-    mediana = cv2.medianBlur(imagem, 5)
-
-    # filtro Redução de Ruído (colorido)
-    # denoised_color = cv2.fastNlMeansDenoisingColored(imagem, None, 10, 10, 7, 21)
-
-    # Aplicar contornos na imagem filtrada
-    imagem_contorno = aplicar_contornos(mediana)
+    # Filtro mediana para redução de ruído
+    imagem_filtrada = cv2.medianBlur(imagem, 5)
     
-    return mediana
+    # Segmentação do vermelho após aplicação do filtro
+    imagem_segmentada = segmentar_vermelho(imagem_filtrada)
+    
+    # Aplicar contornos na imagem segmentada
+    imagem_contorno = aplicar_contornos(imagem_segmentada)
+    
+    return imagem_contorno
 
 # Função para salvar a imagem filtrada
 def salvar_imagem(imagem, caminho_original):
