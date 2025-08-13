@@ -1,0 +1,57 @@
+import cv2
+import numpy as np
+import os
+from tkinter import Tk, filedialog
+
+def selecionar_imagens():
+    Tk().withdraw()
+    caminhos = filedialog.askopenfilenames(
+        title="Selecione as imagens",
+        filetypes=[("Imagens", "*.bmp;*.jpg;*.png")]
+    )
+    return list(caminhos)
+
+def aplicar_filtro_completo(caminho):
+    imagem_cinza = cv2.imread(caminho, cv2.IMREAD_GRAYSCALE)
+    if imagem_cinza is None:
+        print(f"Erro ao carregar a imagem: {caminho}")
+        return None
+
+    _, imagem_binaria = cv2.threshold(imagem_cinza, 60, 255, cv2.THRESH_BINARY_INV)
+   
+    contornos, _ = cv2.findContours(imagem_binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    imagem_pintada = np.zeros_like(imagem_binaria)
+
+    cv2.drawContours(imagem_pintada, contornos, -1, 255, thickness=cv2.FILLED)
+
+    # floodFill dentro dos contornos
+    imagem_flood = imagem_pintada.copy()
+    altura, largura = imagem_flood.shape
+    mascara = np.zeros((altura + 2, largura + 2), np.uint8)
+
+    for contorno in contornos:
+        M = cv2.moments(contorno)
+        if M['m00'] != 0:
+            cx = int(M['m10'] / M['m00'])
+            cy = int(M['m01'] / M['m00'])
+            cv2.floodFill(imagem_flood, mascara, (cx, cy), 255)
+
+    return imagem_flood
+
+def salvar_imagem(imagem, caminho_original, sufixo):
+    pasta_saida = "imagens_processadas"
+    os.makedirs(pasta_saida, exist_ok=True)
+    nome_arquivo = os.path.basename(caminho_original)
+    caminho_saida = os.path.join(pasta_saida, f"{sufixo}_{nome_arquivo}")
+    cv2.imwrite(caminho_saida, imagem)
+    print(f"Imagem salva em: {caminho_saida}")
+
+caminhos_imagens = selecionar_imagens()
+
+for caminho in caminhos_imagens:
+    resultado = aplicar_filtro_completo(caminho)
+    if resultado is not None:
+        salvar_imagem(resultado, caminho, "preenchido")
+
+cv2.destroyAllWindows()
