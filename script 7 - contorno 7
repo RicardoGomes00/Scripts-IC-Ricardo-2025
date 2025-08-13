@@ -1,0 +1,73 @@
+import cv2
+
+# Caminho do vídeo
+caminho_video = r"C:\Users\Ricardo Gomes\Desktop\bolhas.mp4"
+
+# Carregar o vídeo
+video = cv2.VideoCapture(caminho_video)
+
+# Verificar se o vídeo foi carregado corretamente
+if not video.isOpened():
+    print("Não foi possível carregar o vídeo. Verifique o caminho.")
+else:
+    while True:
+        # Ler cada quadro do vídeo
+        ret, frame = video.read()
+        
+        # Verificar se o quadro foi lido corretamente
+        if not ret:
+            print("Fim do vídeo ou erro ao ler o quadro.")
+            break
+
+        # Obter dimensões do quadro
+        altura, largura = frame.shape[:2]
+
+        # Converter para escala de cinza
+        frame_cinza = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Ajustar o contraste e o brilho
+        alpha = 1.0  # Contraste
+        beta = 0   # Brilho
+        frame_clareado = cv2.convertScaleAbs(frame_cinza, alpha=alpha, beta=beta)
+
+        # Converter para preto e branco (binário)
+        _, frame_pb = cv2.threshold(frame_clareado, 128, 255, cv2.THRESH_BINARY)
+
+        # Detectar contornos na imagem preto e branco
+        contornos, _ = cv2.findContours(frame_pb, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Copiar o quadro original para desenhar os contornos
+        frame_contornos = frame.copy()
+
+        for contorno in contornos:
+            # Aproximar o contorno
+            epsilon = 0.02 * cv2.arcLength(contorno, True)
+            vertices = cv2.approxPolyDP(contorno, epsilon, True)
+
+            # Verificar se o contorno é um círculo (muitos vértices)
+            if len(vertices) > 5:
+                # Calcular o círculo mínimo que envolve o contorno
+                (x, y), raio = cv2.minEnclosingCircle(contorno)
+                diametro = 2 * raio
+
+                # Verificar se o diâmetro é maior ou igual a 50 pixels
+                if diametro >= 50:
+                    # Desenhar o contorno em verde
+                    cv2.drawContours(frame_contornos, [contorno], -1, (0, 255, 0), 2)
+
+        # Redimensionar o quadro para ter 500 pixels de largura
+        novo_largura = 500
+        nova_altura = int(altura * (novo_largura / largura))
+        frame_redimensionado = cv2.resize(frame_contornos, (novo_largura, nova_altura))
+
+        # Exibir o quadro redimensionado com contornos em verde e fundo preto e branco
+        cv2.imshow("Vídeo Redimensionado com Contornos Verdes", frame_redimensionado)
+
+        # Atraso no próximo quadro (aumentar o valor de espera para desacelerar o vídeo)
+        atraso = 1  # valor maior = vídeo mais lento (em milissegundos)
+        if cv2.waitKey(atraso) & 0xFF == ord('q'):
+            break
+
+    # Liberar o vídeo e fechar janelas
+    video.release()
+    cv2.destroyAllWindows()
