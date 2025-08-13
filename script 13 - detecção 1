@@ -1,0 +1,40 @@
+import cv2
+import numpy as np
+
+# caminho_video = r"C:\Users\Ricardo Gomes\Desktop\output_video_MaskInvertida_v1.avi"
+caminho_video = r"C:\Users\Ricardo Gomes\Desktop\bolhas.mp4"
+
+
+cap = cv2.VideoCapture(caminho_video)
+
+if not cap.isOpened():
+    print("Erro ao abrir o video!")
+    exit()
+
+while True:
+    ret, frame = cap.read()
+
+    if not ret:
+        break
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=1.2, minDist=30, param1=50, param2=30, minRadius=10, maxRadius=100)
+
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
+        print("Bolhas detectadas no quadro:")
+        for i, (x, y, r) in enumerate(circles):
+            # Desenhar o circulo e o centro na imagem
+            cv2.circle(frame, (x, y), r, (0, 255, 0), 4)  # Circulo verde
+            cv2.rectangle(frame, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)  # Centro da bolha
+
+            print(f"Bolha {i+1}: Posicao = ({x}, {y})")
+
+    cv2.imshow('Detecao de Bolhas', frame)
+
+    if cv2.waitKey(150) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
