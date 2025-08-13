@@ -1,0 +1,58 @@
+import cv2
+import numpy as np
+import os
+from tkinter import Tk, filedialog
+
+# Função para selecionar várias imagens
+def selecionar_imagens():
+    Tk().withdraw()
+    caminhos = filedialog.askopenfilenames(title="Selecione as imagens", filetypes=[("Imagens", "*.bmp;*.jpg;*.png")])
+    return list(caminhos)
+
+# Função para aplicar filtro e pintar os contornos
+def aplicar_filtro(caminho):
+    imagem_cinza = cv2.imread(caminho, cv2.IMREAD_GRAYSCALE)
+    if imagem_cinza is None:
+        print(f"Erro ao carregar a imagem: {caminho}")
+        return None
+
+    # Binarização com inversão
+    limite = 60
+    _, imagem_binaria = cv2.threshold(imagem_cinza, limite, 255, cv2.THRESH_BINARY_INV)
+
+    # Aplicar fechamento para eliminar pequenos buracos
+    kernel = np.ones((3, 3), np.uint8)
+    imagem_binaria = cv2.morphologyEx(imagem_binaria, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+    # Encontrar os contornos
+    contornos, _ = cv2.findContours(imagem_binaria, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Imagem preta para pintar contornos
+    imagem_pintada = np.zeros_like(imagem_binaria)
+
+    # Desenhar contornos preenchidos
+    cv2.drawContours(imagem_pintada, contornos, -1, 255, thickness=cv2.FILLED)
+
+    return imagem_pintada
+
+
+# Função para salvar a imagem filtrada
+def salvar_imagem(imagem, caminho_original, sufixo):
+    pasta_saida = "imagens_processadas"
+    os.makedirs(pasta_saida, exist_ok=True)
+    nome_arquivo = os.path.basename(caminho_original)
+    caminho_saida = os.path.join(pasta_saida, f"{sufixo}_{nome_arquivo}")
+    cv2.imwrite(caminho_saida, imagem)
+    print(f"Imagem salva em: {caminho_saida}")
+
+# Selecionar imagens
+caminhos_imagens = selecionar_imagens()
+
+# Processar cada imagem
+for caminho in caminhos_imagens:
+    imagem_segmentada = aplicar_filtro(caminho)
+    if imagem_segmentada is not None:
+        salvar_imagem(imagem_segmentada, caminho, "contornos_preenchidos")
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
