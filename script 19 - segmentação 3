@@ -1,0 +1,49 @@
+import cv2
+import numpy as np
+import os
+from tkinter import Tk, filedialog
+
+# Função para selecionar várias imagens
+def selecionar_imagens():
+    Tk().withdraw()  
+    caminhos = filedialog.askopenfilenames(title="Selecione as imagens", filetypes=[("Imagens", "*.bmp;*.jpg;*.png")])
+    return list(caminhos)
+
+# Função mediana
+def aplicar_filtro(caminho):
+    imagem_cinza = cv2.imread(caminho, cv2.IMREAD_GRAYSCALE)
+    if imagem_cinza is None:
+        print(f"Erro ao carregar a imagem: {caminho}")
+        return None
+
+   
+    imagem_suavizada = cv2.medianBlur(imagem_cinza, 5)
+  
+
+    # Quanto menor o valor mais perto do preto . 
+    _, imagem_segmentada = cv2.threshold(imagem_suavizada, 90, 255, cv2.THRESH_BINARY_INV)
+
+    return imagem_segmentada
+    
+    
+
+# Função para salvar a imagem filtrada
+def salvar_imagem(imagem, caminho_original, sufixo):
+    pasta_saida = "imagens_processadas"
+    os.makedirs(pasta_saida, exist_ok=True)
+    nome_arquivo = os.path.basename(caminho_original)
+    caminho_saida = os.path.join(pasta_saida, f"{sufixo}_{nome_arquivo}")
+    cv2.imwrite(caminho_saida, imagem)
+    print(f"Imagem salva em: {caminho_saida}")
+
+# Selecionar imagens
+caminhos_imagens = selecionar_imagens()
+
+# Processar cada imagem
+for caminho in caminhos_imagens:
+    imagem_segmentada = aplicar_filtro(caminho)
+    if imagem_segmentada is not None:
+        salvar_imagem(imagem_segmentada, caminho, "segmentacao_hsv")
+
+cv2.waitKey(0)
+cv2.destroyAllWindows()
