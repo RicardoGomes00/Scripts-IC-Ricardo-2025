@@ -1,0 +1,87 @@
+import cv2
+import time
+import numpy as np
+
+# Caminho do vídeo
+caminho_video = r"C:\Users\Ricardo Gomes\Desktop\output_video_MaskInvertida_v1.avi"
+
+# Parâmetros ajustáveis
+DIAMETRO_MINIMO = 40
+DIAMETRO_MAXIMO = 150
+VELOCIDADE_VIDEO = 10
+BRILHO = 1
+CONTRASTE = 1.7
+
+# Carregar o vídeo
+video = cv2.VideoCapture(caminho_video)
+
+if not video.isOpened():
+    print("Não foi possível carregar o video. Verifique o caminho.")
+else:
+    tempo_inicio = time.time()
+    contador_objetos = 0
+
+    while True:
+        ret, frame = video.read()
+        if not ret:
+            print("Fim do video ou erro ao ler o quadro.")
+            break
+
+        altura, largura = frame.shape[:2]
+
+        # Converter para escala de cinza
+        frame_cinza = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Ajustar contraste e brilho
+        frame_ajustado = cv2.convertScaleAbs(frame_cinza, alpha=CONTRASTE, beta=BRILHO)
+
+        # Suavizar a imagem para reduzir ruídos
+        frame_suavizado = cv2.GaussianBlur(frame_ajustado, (5, 5), 0)
+
+        # Detecção de bordas com Canny
+        bordas = cv2.Canny(frame_suavizado, 30, 100)
+
+        # Encontrar contornos
+        contornos, _ = cv2.findContours(bordas, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Criar uma cópia do frame original para desenhar os contornos
+        frame_contornos = frame.copy()
+
+        contador_temp = 0
+        for contorno in contornos:
+            # Calcular o círculo mínimo que envolve o contorno
+            (x, y), raio = cv2.minEnclosingCircle(contorno)
+            diametro = 2 * raio
+
+            # Verificar se o diâmetro está entre os limites
+            if (DIAMETRO_MINIMO <= diametro) and (diametro <= DIAMETRO_MAXIMO):
+                # Desenhar o contorno em verde
+                cv2.drawContours(frame_contornos, [contorno], -1, (0, 255, 0), 2)
+                contador_temp += 1
+
+        # Atualizar contador a cada 0.5 segundos
+        if time.time() - tempo_inicio >= 0.5:
+            contador_objetos = contador_temp
+            tempo_inicio = time.time()
+
+        # Redimensionar a imagem para visualização
+        novo_largura = 1000
+        nova_altura = int(altura * (novo_largura / largura))
+        frame_redimensionado = cv2.resize(frame_contornos, (novo_largura, nova_altura))
+
+        # Mostrar vídeo com contornos
+        cv2.imshow("Video com Contagem de Objetos", frame_redimensionado)
+
+        # Tela com contagem de objetos
+        tela_contagem = np.zeros((200, 400, 3), dtype=np.uint8)
+        texto_contagem = f"Objetos contornados: {contador_objetos}"
+        cv2.putText(tela_contagem, texto_contagem, (20, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        cv2.imshow("Contagem de Objetos", tela_contagem)
+
+        # Parar com a tecla 'q'
+        if cv2.waitKey(VELOCIDADE_VIDEO) & 0xFF == ord('q'):
+            break
+
+    # Liberar vídeo e fechar janelas
+    video.release()
+    cv2.destroyAllWindows()
