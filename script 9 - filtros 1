@@ -1,0 +1,52 @@
+import cv2
+import numpy as np
+
+# Caminho do vídeo
+# caminho_video = r"C:\Users\Ricardo Gomes\Desktop\bolhas.mp4"
+
+caminho_video = r"C:\Users\Ricardo Gomes\Desktop\output_video_MaskInvertida_v1.avi"
+
+# Carregar o vídeo
+video = cv2.VideoCapture(caminho_video)
+
+# Verificar se o vídeo foi carregado corretamente
+if not video.isOpened():
+    print("Não foi possível carregar o vídeo. Verifique o caminho.")
+else:
+    while True:
+        # Ler cada quadro do vídeo
+        ret, frame = video.read()
+        
+        # Verificar se o quadro foi lido corretamente
+        if not ret:
+            print("Fim do vídeo ou erro ao ler o quadro.")
+            break
+
+        # Converter o quadro para escala de cinza
+        frame_cinza = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Aplicar o filtro Sobel
+        sobel_x = cv2.Sobel(frame_cinza, cv2.CV_64F, 1, 0, ksize=3)  # Gradiente horizontal
+        sobel_y = cv2.Sobel(frame_cinza, cv2.CV_64F, 0, 1, ksize=3)  # Gradiente vertical
+
+        # Calcular a magnitude do gradiente
+        sobel_magnitude = cv2.magnitude(sobel_x, sobel_y)
+
+        # Normalizar para escala de 0 a 255 e converter para uint8
+        sobel_normalized = cv2.normalize(sobel_magnitude, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+
+        # Redimensionar o quadro para exibição
+        novo_largura = 1000
+        nova_altura = int(frame.shape[0] * (novo_largura / frame.shape[1]))
+        sobel_redimensionado = cv2.resize(sobel_normalized, (novo_largura, nova_altura))
+
+        # Exibir o quadro com filtro Sobel aplicado
+        cv2.imshow("Vídeo com Filtro Sobel", sobel_redimensionado)
+
+        # Atraso no próximo quadro (1 ms para exibição em tempo real)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    # Liberar o vídeo e fechar janelas
+    video.release()
+    cv2.destroyAllWindows()
