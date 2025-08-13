@@ -1,0 +1,36 @@
+import cv2
+
+# é necessário alterar o caminho da imagem salva no seu computador
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\cachorro-2.jpg"
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P02_1_C001H001S0001000160.bmp"
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P02_1_C001H001S0001000198.bmp"
+caminho = r"C:\Users\Ricardo Gomes\Desktop\P06_C001H001S0001000168.bmp"
+
+
+# Carregar a imagem original
+imagem = cv2.imread(caminho)
+
+# Verificar se a imagem foi carregada com sucesso
+if imagem is None:
+    print("Não foi possível carregar a imagem. Verifique o caminho.")
+else:
+    imagem_cinza = cv2.cvtColor(imagem, cv2.COLOR_BGR2GRAY)
+    
+    _, imagem_pb = cv2.threshold(imagem_cinza, 128, 255, cv2.THRESH_BINARY)
+
+    # Exibir as imagens
+    cv2.imshow("Imagem Carregada", imagem)
+    cv2.imshow("Imagem em Escala de Cinza", imagem_cinza)
+    cv2.imshow("Imagem em Preto e Branco", imagem_pb)
+    
+    # Detectar contornos na imagem preto e branco
+    contornos, _ = cv2.findContours(imagem_pb, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    imagem_contornos = cv2.cvtColor(imagem_pb, cv2.COLOR_GRAY2BGR)
+    cv2.drawContours(imagem_contornos, contornos, -1, (0, 255, 0), 2)
+
+    # Exibir a imagem com os contornos
+    cv2.imshow("Contornos Detectados", imagem_contornos)
+
+    cv2.waitKey(0) 
+    cv2.destroyAllWindows()
