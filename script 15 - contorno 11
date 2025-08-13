@@ -1,0 +1,89 @@
+import cv2
+import numpy as np
+
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P01_C001H001S0001000005.bmp"
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P01_C001H001S0001000135.bmp"
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P35_C001H001S0001000014.bmp"
+# caminho = r"C:\Users\Ricardo Gomes\Desktop\P401_C001H001S0001000004.bmp"
+
+caminho = r"C:\Users\Ricardo Gomes\Desktop\imagens\P01\P01_C001H001S0001014131.bmp"
+
+# Carregar a imagem original
+imagem = cv2.imread(caminho)
+
+# Aplicar colormap para transformar em imagem colorida
+imagem_colorida = cv2.applyColorMap(imagem, cv2.COLORMAP_RAINBOW)
+
+# Função para detectar e desenhar contornos
+def aplicar_contornos(img, tamanho_minimo=20):
+    bordas = cv2.Canny(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 50, 150)  # Detectar bordas
+    img_contorno = img.copy()
+    
+    contornos, _ = cv2.findContours(bordas, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Filtrar contornos pelo tamanho mínimo
+    contornos_filtrados = [contorno for contorno in contornos if cv2.contourArea(contorno) > tamanho_minimo]
+
+    # Desenhar apenas os contornos que atendem ao critério de tamanho
+    cv2.drawContours(img_contorno, contornos_filtrados, -1, (0, 0, 0), 1)  # Desenhar em preto
+    return img_contorno
+
+# Verificar se a imagem foi carregada com sucesso
+if imagem is None:
+    print("Nao foi possivel carregar a imagem. Verifique o caminho.")
+else:
+
+    # original
+    cv2.imshow("Imagem Original", imagem)
+
+    # original
+    cv2.imshow("Imagem Colorida", imagem_colorida)
+
+
+    # 1. Filtro Gaussiano
+    gaussiano = cv2.GaussianBlur(imagem_colorida, (5, 5), 0)
+    gaussiano_contorno = aplicar_contornos (gaussiano)
+    cv2.imshow("Filtro Gaussiano", gaussiano_contorno)
+    
+    # 2. Filtro da Mediana
+    mediana = cv2.medianBlur(imagem_colorida, 5)
+    mediana_contorno = aplicar_contornos (mediana)
+    cv2.imshow("Filtro da Mediana", mediana_contorno)
+    
+    # 3. Filtro Bilateral
+    bilateral = cv2.bilateralFilter(imagem_colorida, 9, 75, 75)
+    bilateral_contorno = aplicar_contornos (bilateral)
+    cv2.imshow("Filtro Bilateral", bilateral_contorno)
+    
+    # 4. Transformada de Fourier (remocao de ruidos de alta frequencia)
+    gray = cv2.cvtColor(imagem_colorida, cv2.COLOR_BGR2GRAY)
+    dft = cv2.dft(np.float32(gray), flags=cv2.DFT_COMPLEX_OUTPUT)
+    dft_shift = np.fft.fftshift(dft)
+    
+    rows, cols = gray.shape
+    mask = np.zeros((rows, cols, 2), np.uint8)
+    mask[rows//2-30:rows//2+30, cols//2-30:cols//2+30] = 1
+    
+    dft_shift *= mask
+    dft_i = np.fft.ifftshift(dft_shift)
+    img_back = cv2.idft(dft_i)
+    img_back = cv2.magnitude(img_back[:, :, 0], img_back[:, :, 1])
+    cv2.imshow("Transformada de Fourier", img_back)
+    
+    # 5. Filtros Morfologicos
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
+    morfologico = cv2.morphologyEx(imagem_colorida, cv2.MORPH_OPEN, kernel)
+    morfologico_contorno = aplicar_contornos(morfologico)
+    cv2.imshow("Filtro Morfologico (Opening)", morfologico_contorno)
+    
+    # 6. Reducao de Ruido com cv2.fastNlMeansDenoising (escala de cinza)
+    denoised_gray = cv2.fastNlMeansDenoising(gray, None, 10, 7, 21)
+    cv2.imshow("Reducao de Ruido (Gray)", denoised_gray)
+    
+    # 7. Redução de Ruído com cv2.fastNlMeansDenoisingColored (colorido)
+    denoised_color = cv2.fastNlMeansDenoisingColored(imagem_colorida, None, 10, 10, 7, 21)
+    denoised_color_contorno = aplicar_contornos (denoised_color)
+    cv2.imshow("Reducao de Ruido (Colorido)", denoised_color_contorno)
+    
+    cv2.waitKey(0) 
+    cv2.destroyAllWindows()
