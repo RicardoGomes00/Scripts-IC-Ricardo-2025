@@ -1,0 +1,44 @@
+import cv2
+import os
+from tkinter import Tk, filedialog
+
+# Função para selecionar várias imagens
+def selecionar_imagens():
+    Tk().withdraw()  
+    caminhos = filedialog.askopenfilenames(title="Selecione as imagens", filetypes=[("Imagens", "*.bmp;*.jpg;*.png")])
+    return list(caminhos)
+
+# Função vídeo mais lento 
+def criar_video(caminhos_imagens, nome_video="video_saida.mp4", fps=30, fator_lentidao=3):
+    if not caminhos_imagens:
+        print("Nenhuma imagem selecionada.")
+        return
+    
+    # Carregar a primeira imagem para obter dimensões
+    primeira_imagem = cv2.imread(caminhos_imagens[0])
+    altura, largura, _ = primeira_imagem.shape
+    
+    # Configurar o codec e criar o objeto de gravação de vídeo
+    caminho_saida = os.path.join(os.getcwd(), nome_video)
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video_writer = cv2.VideoWriter(caminho_saida, fourcc, fps, (largura, altura))
+    
+    for caminho in caminhos_imagens:
+        imagem = cv2.imread(caminho)
+        if imagem is None:
+            print(f"Erro ao carregar a imagem: {caminho}")
+            continue
+        
+        imagem_redimensionada = cv2.resize(imagem, (largura, altura))
+        
+        # Repetir a imagem para simular câmera lenta
+        for _ in range(fator_lentidao):
+            video_writer.write(imagem_redimensionada)
+    
+    video_writer.release()
+    print(f"Vídeo salvo em: {caminho_saida}")
+
+caminhos_imagens = selecionar_imagens()
+
+# Criar o vídeo
+criar_video(caminhos_imagens, fator_lentidao=4)
