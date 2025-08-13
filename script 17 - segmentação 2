@@ -1,0 +1,66 @@
+import cv2
+import numpy as np
+import os
+from tkinter import Tk, filedialog
+
+# Função para selecionar múltiplas imagens
+def selecionar_imagens():
+    Tk().withdraw()  
+    caminhos = filedialog.askopenfilenames(title="Selecione as imagens", filetypes=[("Imagens", "*.bmp;*.jpg;*.png")])
+    return list(caminhos)
+
+# Função para detectar e desenhar contornos
+def aplicar_contornos(img, tamanho_minimo=20):
+    bordas = cv2.Canny(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 50, 150)  
+    img_contorno = img.copy()
+    
+    contornos, _ = cv2.findContours(bordas, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    contornos_filtrados = [contorno for contorno in contornos if cv2.contourArea(contorno) > tamanho_minimo]
+
+    cv2.drawContours(img_contorno, contornos_filtrados, -1, (0, 0, 0), 1)  
+    return img_contorno
+
+def aplicar_filtro_mediana(caminho):
+    imagem_cinza = cv2.imread(caminho, cv2.IMREAD_GRAYSCALE)
+    if imagem_cinza is None:
+        print(f"Erro ao carregar a imagem: {caminho}")
+        return None
+    
+    imagem = cv2.applyColorMap(imagem_cinza, cv2.COLORMAP_RAINBOW)
+
+    # filtro morfologico
+    # kernel = np.ones((5, 5), np.uint8)
+    # imagem_morfologica = cv2.morphologyEx(imagem, cv2.MORPH_CLOSE, kernel)
+
+    # fiiltlro mediana
+    mediana = cv2.medianBlur(imagem, 5)
+
+    # filtro Redução de Ruído (colorido)
+    # denoised_color = cv2.fastNlMeansDenoisingColored(imagem, None, 10, 10, 7, 21)
+
+    # Aplicar contornos na imagem filtrada
+    imagem_contorno = aplicar_contornos(mediana)
+    
+    return mediana
+
+# Função para salvar a imagem filtrada
+def salvar_imagem(imagem, caminho_original):
+    pasta_saida = "imagens_processadas"
+    os.makedirs(pasta_saida, exist_ok=True)
+    nome_arquivo = os.path.basename(caminho_original)
+    caminho_saida = os.path.join(pasta_saida, f"filtrada_{nome_arquivo}")
+    cv2.imwrite(caminho_saida, imagem)
+    print(f"Imagem salva em: {caminho_saida}")
+
+# Selecionar imagens
+caminhos_imagens = selecionar_imagens()
+
+# Processar cada imagem
+for caminho in caminhos_imagens:
+    imagem_filtrada = aplicar_filtro_mediana(caminho)
+    if imagem_filtrada is not None:
+        salvar_imagem(imagem_filtrada, caminho)
+       
+cv2.waitKey(0)
+cv2.destroyAllWindows()
